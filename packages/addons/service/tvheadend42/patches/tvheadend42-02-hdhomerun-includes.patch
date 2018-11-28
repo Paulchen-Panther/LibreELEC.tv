@@ -2,7 +2,7 @@ fix libhdhomerun includes
 
 --- a/configure
 +++ b/configure
-@@ -362,7 +362,7 @@ if enabled hdhomerun_static; then
+@@ -412,7 +412,7 @@ if enabled hdhomerun_static; then
  else
  
    if enabled_or_auto hdhomerun_client; then
@@ -11,14 +11,25 @@ fix libhdhomerun includes
        enable  hdhomerun_client
        LDFLAGS="$LDFLAGS -lhdhomerun"
      fi
---- a/src/input/mpegts/tvhdhomerun/tvhdhomerun_private.h
-+++ b/src/input/mpegts/tvhdhomerun/tvhdhomerun_private.h
-@@ -24,7 +24,7 @@
- #include "htsbuf.h"
- #include "tvhdhomerun.h"
+--- a/src/input/mpegts/tvhdhomerun/tvhdhomerun.c
++++ b/src/input/mpegts/tvhdhomerun/tvhdhomerun.c
+@@ -17,7 +17,7 @@
+  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  */
  
 -#include "libhdhomerun/hdhomerun.h"
 +#include "hdhomerun.h"
  
- typedef struct tvhdhomerun_device_info tvhdhomerun_device_info_t;
- typedef struct tvhdhomerun_device      tvhdhomerun_device_t;
+ #include "tvheadend.h"
+ #include "input.h"
+--- a/src/input/mpegts/tvhdhomerun/tvhdhomerun_frontend.c
++++ b/src/input/mpegts/tvhdhomerun/tvhdhomerun_frontend.c
+@@ -17,7 +17,7 @@
+  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  */
+ 
+-#include "libhdhomerun/hdhomerun.h"
++#include "hdhomerun.h"
+ 
+ #include <fcntl.h>
+ #include "tvheadend.h"
