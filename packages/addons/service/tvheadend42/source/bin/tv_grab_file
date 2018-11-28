@@ -37,7 +37,7 @@ then
       exec "$XMLTV_LOCATION_SCRIPT"
     fi
   elif [ "$XMLTV_TYPE" = "WEB" ]; then
-    wget -qO - "$XMLTV_LOCATION_WEB"
+    wget -qO - "${XMLTV_LOCATION_WEB//&amp\;/\&}"
     exit 0
   fi
 fi
