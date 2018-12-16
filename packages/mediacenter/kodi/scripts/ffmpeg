@@ -1,0 +1,11 @@
+#!/bin/bash
+
+# SPDX-License-Identifier: GPL-2.0
+# Copyright (C) 2018-present Team LibreELEC (https://libreelec.tv)
+
+b="/storage/.kodi/addons/tools.ffmpeg-tools/bin/ffmpeg"
+if [ -x "$b" ]; then
+  exec $b "$@"
+else
+  echo "FFmpeg is not installed, please install the FFmpeg-Tools Add-on from the LibreELEC repository."
+fi
