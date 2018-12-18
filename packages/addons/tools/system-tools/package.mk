@@ -125,7 +125,9 @@ addon() {
     cp -P $(get_build_dir lshw)/src/lshw $ADDON_BUILD/$PKG_ADDON_ID/bin
 
     # mc
+    mkdir -p $ADDON_BUILD/$PKG_ADDON_ID/mclib/
     cp -Pa $(get_build_dir mc)/.install_pkg/usr/bin/* $ADDON_BUILD/$PKG_ADDON_ID/bin/
+    cp -Pa $(get_build_dir mc)/.install_pkg/usr/lib/mc/* $ADDON_BUILD/$PKG_ADDON_ID/mclib/
     cp -Pa $(get_build_dir mc)/.install_pkg/storage/.kodi/addons/virtual.system-tools/* $ADDON_BUILD/$PKG_ADDON_ID
 
     # mrxvt
