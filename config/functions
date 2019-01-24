@@ -1074,7 +1074,7 @@ done
     if  ! command -v xmlstarlet >/dev/null ; then
       die "*** ERROR: $ADDON has addon.xml shipped, you need 'xmlstarlet' ***" "255"
     fi
-    addon_version="${PKG_ADDON_VERSION:-$(xmlstarlet sel -t -v "/addon/@version" "$addon_xml").$PKG_REV}"
+    addon_version="${ADDON_VERSION}.${PKG_REV}.${PKG_ADDON_VERSION:-$(xmlstarlet sel -t -v "/addon/@version" "$addon_xml")}"
     xmlstarlet ed --inplace -u "/addon[@version]/@version" -v "$addon_version" "$addon_xml"
   fi
 
