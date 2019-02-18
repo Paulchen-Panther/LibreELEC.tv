@@ -1,0 +1,72 @@
+#!/bin/bash
+
+# SPDX-License-Identifier: GPL-2.0-or-later
+# Copyright (C) 2019 Ian Leonard (antonlacon@gmail.com)
+
+# update-scan: use debian's uscan to check for available package updates
+
+set -e
+
+. config/options ""
+
+# configuration
+QUIET="yes"
+
+# functions
+help() {
+  echo "Usage: "
+}
+
+check_for_update() {
+  # make optional variables from makefiles local to wipe for next invocation
+  local PKG_DOWNLOAD_REPO PKG_USCAN PKG_URL watch_test
+
+  . "${1}"
+
+  if [ -z "${PKG_USCAN}" ]; then
+    echo "info: ${PKG_NAME}: PKG_USCAN not set; skipping"
+    return
+  fi
+
+  if [ -z "${PKG_URL}" -a -z "${PKG_DOWNLOAD_REPO}" ]; then
+    echo "warning: ${PKG_NAME}: unknown download repository; please set PKG_DOWNLOAD_REPO in package.mk"
+    return
+  fi
+
+  if [ -z "${PKG_DOWNLOAD_REPO}" ]; then
+    download_repo=$(dirname "${PKG_URL}")
+  else
+    download_repo="${PKG_DOWNLOAD_REPO}"
+  fi
+
+#  uscan_regex="${PKG_USCAN:-${PKG_NAME}-(.+)\.(?:zip|tgz|tbz|txz\(?:tar\.(?:gz|bz2|xz)))}"
+#  watch_test="${download_repo} ${uscan_regex}"
+  watch_test="${download_repo} ${PKG_USCAN}"
+
+  uscan_tmpfile=$(mktemp)
+  echo "version=4" > "${uscan_tmpfile}"
+  echo "${watch_test}" >> "${uscan_tmpfile}"
+
+  uscan --no-conf --report-status --package "${PKG_NAME}" --upstream-version "${PKG_VERSION}" --watchfile "${uscan_tmpfile}" | tail -n3 | head -n1
+
+  rm "${uscan_tmpfile}"
+}
+
+# pre-check
+if ! command -v uscan >/dev/null; then
+  die "error: uscan not found; this is required"
+fi
+
+# do work
+
+if [ -z "${1}" ]; then
+  PACKAGE_LIST=$(find packages/ -type f -name package.mk | sort)
+else
+  PACKAGE_LIST="${@}"
+fi
+
+for build_file in ${PACKAGE_LIST}; do
+
+  check_for_update "${build_file}"
+
+done
