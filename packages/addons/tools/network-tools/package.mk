@@ -91,4 +91,8 @@ addon() {
     ln -s iwmulticall $ADDON_BUILD/$PKG_ADDON_ID/bin/iwlist
     ln -s iwmulticall $ADDON_BUILD/$PKG_ADDON_ID/bin/iwspy
     ln -s iwmulticall $ADDON_BUILD/$PKG_ADDON_ID/bin/iwpriv
+
+  mkdir -p $ADDON_BUILD/$PKG_ADDON_ID/lib
+    # lftp
+    cp -PL $(get_build_dir libidn2)/.install_pkg/usr/lib/libidn2.so.4 $ADDON_BUILD/$PKG_ADDON_ID/lib
 }
