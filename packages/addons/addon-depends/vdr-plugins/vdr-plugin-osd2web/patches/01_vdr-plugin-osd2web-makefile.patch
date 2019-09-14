@@ -1,0 +1,52 @@
+diff -Naur vdr-plugin-osd2web/Make.config vdr-plugin-osd2web/Make.config
+--- vdr-plugin-osd2web/Make.config
++++ vdr-plugin-osd2web/Make.config
+@@ -20,8 +20,8 @@
+   CC = g++
+ endif
+ 
+-doCompile = $(CC) -c $(CFLAGS) $(DEFINES)
+-doLink    = $(CC) $(LFLAGS)
++doCompile = $(CXX) -c $(CFLAGS) $(DEFINES)
++doLink    = $(CXX) $(LFLAGS)
+ doLib     = ar -rs
+ 
+ USES = -DVDR_PLUGIN -DUSEJSON -DUSEGUNZIP -DPLUGIN_NAME_I18N='"$(PLUGIN)"'
+diff -Naur vdr-plugin-osd2web/Makefile vdr-plugin-osd2web/Makefile
+--- vdr-plugin-osd2web/Makefile
++++ vdr-plugin-osd2web/Makefile
+@@ -23,11 +23,11 @@
+ # Use package data if installed...otherwise assume we're under the VDR source directory:
+ PKGCFG = $(if $(VDRDIR),$(shell pkg-config --variable=$(1) $(VDRDIR)/vdr.pc),$(shell pkg-config --variable=$(1) vdr || pkg-config --variable=$(1) ../../../vdr.pc))
+ 
+-LIBDIR   = $(call PKGCFG,libdir)
+-LOCDIR   = $(call PKGCFG,locdir)
+-PLGCFG   = $(call PKGCFG,plgcfg)
+-CONFDEST = $(call PKGCFG,configdir)/plugins/$(PLUGIN)
+-HTTPDEST = $(CONFDEST)/http
++LIBDIR   ?= $(call PKGCFG,libdir)
++LOCDIR   ?= $(call PKGCFG,locdir)
++PLGCFG   ?= $(call PKGCFG,plgcfg)
++CONFDEST ?= $(call PKGCFG,configdir)/plugins/$(PLUGIN)
++HTTPDEST ?= $(CONFDEST)/http
+ 
+ #
+ 
+@@ -93,7 +93,7 @@
+ 
+ ### Dependencies:
+ 
+-MAKEDEP = $(CC) -MM -MG
++MAKEDEP = $(CXX) -MM -MG
+ DEPFILE = .dependencies
+ $(DEPFILE): Makefile
+ 	$(MAKEDEP) $(CXXFLAGS) $(DEFINES) $(INCLUDES) $(OBJS:%.o=%.c) > $@
+@@ -129,7 +129,7 @@
+ ### Targets:
+ 
+ $(SOFILE): hlib $(OBJS)
+-	$(CC) $(LDFLAGS) -shared $(OBJS) $(LIBS) -o $@
++	$(CXX) $(LDFLAGS) -shared $(OBJS) $(LIBS) -o $@
+ 
+ cbuild:
+ 	(cd client && $(MAKE) cbuild)
