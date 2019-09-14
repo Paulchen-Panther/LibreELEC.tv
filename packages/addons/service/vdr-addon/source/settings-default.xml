@@ -18,8 +18,6 @@
     <setting id="ENABLE_XMLTV2VDR" default="true">false</setting>
     <setting id="EXTERNAL_RECCMD_PATH" default="true"></setting>
     <setting id="IPTV_NUM_DEVICES">1</setting>
-    <setting id="LIVE_IP" default="true">0.0.0.0</setting>
-    <setting id="LIVE_PORT">8008</setting>
     <setting id="NUM_ADAPTERS">1</setting>
     <setting id="REMOVE_MODULES" default="true"></setting>
     <setting id="RESTFULAPI_IP" default="true">127.0.0.1</setting>

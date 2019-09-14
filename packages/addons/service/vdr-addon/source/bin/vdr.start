@@ -82,9 +82,6 @@ fi
 if [ "$ENABLE_STREAMDEV_CLIENT" == "true" ] ; then
   VDR_ARG="$VDR_ARG -P streamdev-client"
 fi
-if [ "$ENABLE_LIVE" == "true" ] ; then
-  VDR_ARG="$VDR_ARG -P 'live -i $LIVE_IP -p $LIVE_PORT'"
-fi
 if [ "$ENABLE_EEPG" == "true" ] ; then
   VDR_ARG="$VDR_ARG -P eepg"
 fi

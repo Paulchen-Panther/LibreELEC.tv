@@ -61,18 +61,6 @@ msgctxt "#30013"
 msgid "Enable plugin: dvbapi (softcam)"
 msgstr ""
 
-msgctxt "#30014"
-msgid "Enable plugin: live"
-msgstr ""
-
-msgctxt "#30015"
-msgid "- listen on ip"
-msgstr ""
-
-msgctxt "#30016"
-msgid "- listen on port"
-msgstr ""
-
 msgctxt "#30017"
 msgid "Enable plugin: epgsearch"
 msgstr ""
