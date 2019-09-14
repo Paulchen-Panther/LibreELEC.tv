@@ -82,6 +82,9 @@ fi
 if [ "$ENABLE_STREAMDEV_CLIENT" == "true" ] ; then
   VDR_ARG="$VDR_ARG -P streamdev-client"
 fi
+if [ "$ENABLE_OSD2WEB" == "true" ] ; then
+  VDR_ARG="$VDR_ARG -P 'osd2web -i $OSD2WEB_IP -p $OSD2WEB_PORT'"
+fi
 if [ "$ENABLE_EEPG" == "true" ] ; then
   VDR_ARG="$VDR_ARG -P eepg"
 fi

@@ -28,6 +28,9 @@
                 <setting id="ENABLE_EEPG" type="bool" label="30019" default="false" />
                 <setting id="ENABLE_IPTV" type="bool" label="30010" default="false" />
                 <setting id="IPTV_NUM_DEVICES" type="slider" option="int" range="1,4" label="30027" visible="!eq(-1,false)" default="1" />
+                <setting id="ENABLE_OSD2WEB" type="bool" label="30014" default="false" />
+                <setting id="OSD2WEB_IP" type="ipaddress" label="30015" values="" visible="!eq(-1,false)" default="0.0.0.0" />
+                <setting id="OSD2WEB_PORT" type="number" label="30016" values="" visible="!eq(-2,false)"  default="8008" />
                 <setting id="ENABLE_ROBOTV" type="bool" label="30031" default="false" />
                 <setting id="ENABLE_SATIP" type="bool" label="30021" default="false" />
                 <setting id="SATIP_NUM_DEVICES" type="slider" option="int" range="1,10" label="30027" visible="!eq(-1,false)" default="1" />
