@@ -1,0 +1,2 @@
+#!/bin/sh
+exec /storage/.kodi/addons/virtual.system-tools/bin/7z-dummy "$@"
