@@ -1,3 +1,6 @@
+112
+- fixed 7z
+
 111
 - updated autossh to 1.4g
 - updated file to d1ff3af
