@@ -1,5 +1,6 @@
 # SPDX-License-Identifier: GPL-2.0-or-later
 # Copyright (C) 2009-2016 Stephan Raue (stephan@openelec.tv)
+# Copyright (C) 2016-present Team LibreELEC (https://libreelec.tv)
 
 PKG_NAME="avahi"
 PKG_VERSION="0.7"
@@ -82,6 +83,8 @@ post_makeinstall_target() {
 
   mkdir -p $INSTALL/usr/share/services
     cp -P $PKG_DIR/default.d/*.conf $INSTALL/usr/share/services
+
+  ln -sf $SYSROOT_PREFIX/usr/include/avahi-compat-libdns_sd/dns_sd.h $SYSROOT_PREFIX/usr/include/dns_sd.h
 }
 
 post_install() {
