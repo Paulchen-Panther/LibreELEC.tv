@@ -1,17 +1,16 @@
 #!/bin/sh
+
 case "$1" in
   pre)
-    # <do something on suspend>
-    pid=$(pgrep hyperiond)
+    pid="$(pgrep hyperiond)"
     if [ -n "$pid" ]; then
-      kill -SIGUSR1 $pid
+      kill -SIGUSR1 "$pid"
     fi
     ;;
   post)
-    # <do something on resume>
-    pid=$(pgrep hyperiond)
+    pid="$(pgrep hyperiond)"
     if [ -n "$pid" ]; then
-      kill -SIGUSR2 $pid
+      kill -SIGUSR2 "$pid"
     fi
     ;;
 esac
