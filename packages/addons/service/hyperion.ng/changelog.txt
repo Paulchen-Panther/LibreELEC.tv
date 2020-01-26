@@ -1,2 +1,2 @@
 100
-- Initial add-on release
+- Initial add-on
