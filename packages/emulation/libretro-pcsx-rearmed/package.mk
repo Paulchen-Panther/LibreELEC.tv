@@ -26,13 +26,13 @@ make_target() {
   
   case $TARGET_ARCH in
     aarch64)
-      make -f Makefile.libretro platform=aarch64 GIT_VERSION=$PKG_VERSION
+      make -f Makefile.libretro USE_DYNAREC=lightrec platform=aarch64 GIT_VERSION=$PKG_VERSION
       ;;
     arm)
       make -f Makefile.libretro USE_DYNAREC=ari64 GIT_VERSION=$PKG_VERSION
       ;;
     x86_64)
-      make -f Makefile.libretro GIT_VERSION=$PKG_VERSION
+      make -f Makefile.libretro USE_DYNAREC=lightrec GIT_VERSION=$PKG_VERSION
       ;;
   esac
 }
