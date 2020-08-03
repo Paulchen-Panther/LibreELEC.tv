@@ -1,0 +1,10 @@
+--- a/data/polkit.service.in	2020-05-31 03:40:59.876688844 +0200
++++ b/data/polkit.service.in	2020-05-31 03:41:10.997148384 +0200
+@@ -1,6 +1,7 @@
+ [Unit]
+ Description=Authorization Manager
+ Documentation=man:polkit(8)
++DefaultDependencies=no
+ 
+ [Service]
+ Type=dbus

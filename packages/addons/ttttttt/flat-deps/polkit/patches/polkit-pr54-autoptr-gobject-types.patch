@@ -1,0 +1,35 @@
+From 9e71305d44a7009565998a2114f00f00c4d66420 Mon Sep 17 00:00:00 2001
+From: wisp3rwind <wisp3rwind@posteo.eu>
+Date: Mon, 13 Apr 2020 01:02:35 +0200
+Subject: [PATCH] polkitagent:  Add g_autoptr() support for GObject-derived
+ types
+
+Similar to 004bd37d, add G_DEFINE_AUTOPTR_CLEANUP_FUNC calls to
+polkitagenttypes.h, such that g_autoptr() can be used with polkitagent
+objects. This is necessary to be able to use the
+G_DECLARE_FINAL_TYPE/G_DECLARE_DERIVABLE_TYPE macros from recent glib
+in order to subclass these polkitagent classes.
+---
+ src/polkitagent/polkitagenttypes.h | 6 ++++++
+ 1 file changed, 6 insertions(+)
+
+diff --git a/src/polkitagent/polkitagenttypes.h b/src/polkitagent/polkitagenttypes.h
+index 1de03c6..bcc59fb 100644
+--- a/src/polkitagent/polkitagenttypes.h
++++ b/src/polkitagent/polkitagenttypes.h
+@@ -39,6 +39,12 @@ typedef struct _PolkitAgentTextListener PolkitAgentTextListener;
+ struct _PolkitAgentSession;
+ typedef struct _PolkitAgentSession PolkitAgentSession;
+ 
++#if GLIB_CHECK_VERSION(2, 44, 0)
++G_DEFINE_AUTOPTR_CLEANUP_FUNC (PolkitAgentListener, g_object_unref)
++G_DEFINE_AUTOPTR_CLEANUP_FUNC (PolkitAgentTextListener, g_object_unref)
++G_DEFINE_AUTOPTR_CLEANUP_FUNC (PolkitAgentSession, g_object_unref)
++#endif
++
+ G_END_DECLS
+ 
+ #endif /* __POLKIT_AGENT_TYPES_H */
+-- 
+2.26.2
+

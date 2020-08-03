@@ -1,0 +1,37 @@
+--- a/configure.ac	2020-05-21 03:47:08.212814258 +0200
++++ b/configure.ac	2020-05-21 03:48:39.217784291 +0200
+@@ -900,7 +900,8 @@
+                 src/versioninfo.rc
+                 src/gpgme.pc
+                 src/gpgme-glib.pc
+-                src/gpgme.h)
++                src/gpgme.h
++                gpgme-pthread.pc)
+ AC_CONFIG_FILES(src/gpgme-config, chmod +x src/gpgme-config)
+ AC_CONFIG_FILES(lang/cpp/Makefile lang/cpp/src/Makefile)
+ AC_CONFIG_FILES(lang/cpp/tests/Makefile)
+--- a/Makefile.am	2020-05-21 03:47:08.212814258 +0200
++++ b/Makefile.am	2020-05-21 03:48:06.760533758 +0200
+@@ -47,6 +47,10 @@
+ 
+ SUBDIRS = src ${tests} doc lang
+ 
++# pkg-config file
++pkgconfigdir = $(libdir)/pkgconfig
++pkgconfig_DATA = gpgme-pthread.pc
++
+ # Fix the version of the spec file.
+ dist-hook: gen-ChangeLog
+ 	@set -e; \
+--- /dev/null
++++ b/gpgme-pthread.pc.in
+@@ -0,0 +1,9 @@
++prefix=@prefix@
++libdir=${prefix}/lib
++includedir=${prefix}/include
++
++Name: gpgme-pthread
++Description: GNU Privacy Guard Made Easy
++Version: @VERSION@
++Libs: -L${libdir} -lgpgme -lassuan -lgpg-error
++Cflags: -I${includedir}

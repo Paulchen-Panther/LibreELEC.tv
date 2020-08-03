@@ -1,0 +1,11 @@
+--- a/configure.ac	2020-06-16 22:42:54.942282105 +0200
++++ b/configure.ac	2020-06-16 22:43:12.679190986 +0200
+@@ -50,7 +50,7 @@
+   -Werror=undef \
+   -Werror=incompatible-pointer-types \
+   -Werror=misleading-indentation \
+-  -Werror=missing-include-dirs -Werror=aggregate-return \
++  -Werror=aggregate-return \
+   -Wstrict-aliasing=2 \
+   -Werror=unused-result \
+ ])])

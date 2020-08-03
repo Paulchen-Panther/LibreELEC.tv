@@ -1,0 +1,10 @@
+--- a/configure	2020-06-17 00:40:41.405522160 +0200
++++ b/configure	2020-06-17 00:40:48.948960329 +0200
+@@ -15940,7 +15940,6 @@
+ -Werror=parenthesis \
+ -Werror=incompatible-pointer-types \
+ -Werror=misleading-indentation \
+--Werror=missing-include-dirs \
+ ; do
+ 
+   { $as_echo "$as_me:${as_lineno-$LINENO}: checking if $CC supports flag $flag in envvar CFLAGS" >&5
