@@ -1,0 +1,106 @@
+From d4fe25f19279630b0544e79b75c84fef6f1278f4 Mon Sep 17 00:00:00 2001
+From: Jernej Skrabec <jernej.skrabec@siol.net>
+Date: Sun, 2 Aug 2020 19:41:15 +0200
+Subject: [PATCH] Fix building with 5.8
+
+---
+ core/rtw_security.c           | 10 +++++-----
+ include/rtw_security.h        |  2 +-
+ os_dep/linux/ioctl_cfg80211.c |  4 ++++
+ 3 files changed, 10 insertions(+), 6 deletions(-)
+
+diff --git a/core/rtw_security.c b/core/rtw_security.c
+index ae43bfabd05c..c7a994acdc88 100644
+--- a/core/rtw_security.c
++++ b/core/rtw_security.c
+@@ -2135,7 +2135,7 @@ BIP_exit:
+ 
+ #ifndef PLATFORM_FREEBSD
+ /* compress 512-bits */
+-static int sha256_compress(struct sha256_state *md, unsigned char *buf)
++static int sha256_compress(struct sha256_state_rtw *md, unsigned char *buf)
+ {
+ 	u32 S[8], W[64], t0, t1;
+ 	u32 t;
+@@ -2183,7 +2183,7 @@ static int sha256_compress(struct sha256_state *md, unsigned char *buf)
+ }
+ 
+ /* Initialize the hash state */
+-static void sha256_init(struct sha256_state *md)
++static void sha256_init(struct sha256_state_rtw *md)
+ {
+ 	md->curlen = 0;
+ 	md->length = 0;
+@@ -2204,7 +2204,7 @@ static void sha256_init(struct sha256_state *md)
+    @param inlen  The length of the data (octets)
+    @return CRYPT_OK if successful
+ */
+-static int sha256_process(struct sha256_state *md, unsigned char *in,
++static int sha256_process(struct sha256_state_rtw *md, unsigned char *in,
+ 			  unsigned long inlen)
+ {
+ 	unsigned long n;
+@@ -2245,7 +2245,7 @@ static int sha256_process(struct sha256_state *md, unsigned char *in,
+    @param out [out] The destination of the hash (32 bytes)
+    @return CRYPT_OK if successful
+ */
+-static int sha256_done(struct sha256_state *md, unsigned char *out)
++static int sha256_done(struct sha256_state_rtw *md, unsigned char *out)
+ {
+ 	int i;
+ 
+@@ -2295,7 +2295,7 @@ static int sha256_done(struct sha256_state *md, unsigned char *out)
+ static int sha256_vector(size_t num_elem, u8 *addr[], size_t *len,
+ 			 u8 *mac)
+ {
+-	struct sha256_state ctx;
++	struct sha256_state_rtw ctx;
+ 	size_t i;
+ 
+ 	sha256_init(&ctx);
+diff --git a/include/rtw_security.h b/include/rtw_security.h
+index ae651e0f1fef..939342607f83 100644
+--- a/include/rtw_security.h
++++ b/include/rtw_security.h
+@@ -242,7 +242,7 @@ struct security_priv {
+ #endif /* DBG_SW_SEC_CNT */
+ };
+ 
+-struct sha256_state {
++struct sha256_state_rtw {
+ 	u64 length;
+ 	u32 state[8], curlen;
+ 	u8 buf[64];
+diff --git a/os_dep/linux/ioctl_cfg80211.c b/os_dep/linux/ioctl_cfg80211.c
+index add2fbc3bc7e..c32ac394eadd 100644
+--- a/os_dep/linux/ioctl_cfg80211.c
++++ b/os_dep/linux/ioctl_cfg80211.c
+@@ -5459,6 +5459,7 @@ exit:
+ 	return ret;
+ }
+ 
++#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 8, 0)
+ static void cfg80211_rtw_mgmt_frame_register(struct wiphy *wiphy,
+ #if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 6, 0))
+ 	struct wireless_dev *wdev,
+@@ -5502,6 +5503,7 @@ static void cfg80211_rtw_mgmt_frame_register(struct wiphy *wiphy,
+ exit:
+ 	return;
+ }
++#endif
+ 
+ #if defined(CONFIG_TDLS) && (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 2, 0))
+ static int cfg80211_rtw_tdls_mgmt(struct wiphy *wiphy,
+@@ -6465,7 +6467,9 @@ static struct cfg80211_ops rtw_cfg80211_ops = {
+ 
+ #if (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 37)) || defined(COMPAT_KERNEL_RELEASE)
+ 	.mgmt_tx = cfg80211_rtw_mgmt_tx,
++#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 8, 0)
+ 	.mgmt_frame_register = cfg80211_rtw_mgmt_frame_register,
++#endif
+ #elif (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 34) && LINUX_VERSION_CODE <= KERNEL_VERSION(2, 6, 35))
+ 	.action = cfg80211_rtw_mgmt_tx,
+ #endif
+-- 
+2.28.0
+
