@@ -10,3 +10,5 @@
   # KODI Player implementation to use (default / bcm2835-driver / libfslvpuwrap)
     KODIPLAYER_DRIVER="default"
 
+  # set the addon project
+    ADDON_PROJECT="Generic"

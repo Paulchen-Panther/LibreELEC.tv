@@ -15,3 +15,5 @@
   # e.g. GRAPHIC_DRIVERS="i915 i965 r300 r600 radeonsi nvidia"
     GRAPHIC_DRIVERS="r300 r600 radeonsi iris i915 i965 vmware virtio"
 
+  # set the addon project
+    ADDON_PROJECT="Generic"
