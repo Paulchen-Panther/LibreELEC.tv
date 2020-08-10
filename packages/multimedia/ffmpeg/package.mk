@@ -60,6 +60,13 @@ if [ "${VAAPI_SUPPORT}" = "yes" ]; then
   PKG_DEPENDS_TARGET+=" libva"
   PKG_NEED_UNPACK+=" $(get_pkg_directory libva)"
   PKG_FFMPEG_VAAPI="--enable-vaapi"
+
+  if [ "${DISPLAYSERVER}" != "x11" ]; then
+    PKG_DEPENDS_TARGET+=" libdrm"
+    PKG_NEED_UNPACK+=" $(get_pkg_directory libdrm)"
+    PKG_FFMPEG_VAAPI=" --enable-libdrm"
+  fi
+
 else
   PKG_FFMPEG_VAAPI="--disable-vaapi"
 fi
