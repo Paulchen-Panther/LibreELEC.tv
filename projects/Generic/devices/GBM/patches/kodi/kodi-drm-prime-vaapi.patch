@@ -1,0 +1,455 @@
+From db94ad21af6d8051c4a43185717195f34793a393 Mon Sep 17 00:00:00 2001
+From: Jonas Karlman <jonas@kwiboo.se>
+Date: Sun, 20 Oct 2019 10:06:14 +0000
+Subject: [PATCH 1/5] DRMPRIME: add support for descriptor with multiple layers
+
+---
+ cmake/modules/FindFFMPEG.cmake                | 15 +++++++
+ .../HwDecRender/DRMPRIMEEGL.cpp               | 35 +++++++++++++---
+ .../HwDecRender/VideoLayerBridgeDRMPRIME.cpp  | 41 +++++++++++++------
+ 3 files changed, 73 insertions(+), 18 deletions(-)
+
+diff --git a/cmake/modules/FindFFMPEG.cmake b/cmake/modules/FindFFMPEG.cmake
+index 81d26979e3d1..238e3786efb4 100644
+--- a/cmake/modules/FindFFMPEG.cmake
++++ b/cmake/modules/FindFFMPEG.cmake
+@@ -166,6 +166,17 @@ if(NOT ENABLE_INTERNAL_FFMPEG OR KODI_DEPENDSBUILD)
+                                                     FFMPEG_VERSION
+                                       FAIL_MESSAGE "FFmpeg ${REQUIRED_FFMPEG_VERSION} not found, please consider using -DENABLE_INTERNAL_FFMPEG=ON")
+ 
++    include(CheckCSourceCompiles)
++    set(CMAKE_REQUIRED_INCLUDES ${FFMPEG_INCLUDE_DIRS})
++    check_c_source_compiles("#include <libavutil/hwcontext_drm.h>
++
++                             int main()
++                             {
++                               AVDRMFrameDescriptor test;
++                               return test.format;
++                             }
++                             " FFMPEG_HAS_AVDRMFRAMEDESCRIPTOR_FORMAT)
++
+   else()
+     message(STATUS "FFmpeg ${REQUIRED_FFMPEG_VERSION} not found, falling back to internal build")
+     unset(FFMPEG_INCLUDE_DIRS)
+@@ -195,6 +206,10 @@ if(NOT ENABLE_INTERNAL_FFMPEG OR KODI_DEPENDSBUILD)
+                          ${FFMPEG_LIBPOSTPROC} ${FFMPEG_LDFLAGS})
+     list(APPEND FFMPEG_DEFINITIONS -DFFMPEG_VER_SHA=\"${FFMPEG_VERSION}\")
+ 
++    if(FFMPEG_HAS_AVDRMFRAMEDESCRIPTOR_FORMAT)
++      list(APPEND FFMPEG_DEFINITIONS -DHAVE_AVDRMFRAMEDESCRIPTOR_FORMAT=1)
++    endif()
++
+     if(NOT TARGET ffmpeg)
+       add_library(ffmpeg ${FFMPEG_LIB_TYPE} IMPORTED)
+       set_target_properties(ffmpeg PROPERTIES
+diff --git a/xbmc/cores/VideoPlayer/VideoRenderers/HwDecRender/DRMPRIMEEGL.cpp b/xbmc/cores/VideoPlayer/VideoRenderers/HwDecRender/DRMPRIMEEGL.cpp
+index af3dd89f6a3f..6fd7e477bf8a 100644
+--- a/xbmc/cores/VideoPlayer/VideoRenderers/HwDecRender/DRMPRIMEEGL.cpp
++++ b/xbmc/cores/VideoPlayer/VideoRenderers/HwDecRender/DRMPRIMEEGL.cpp
+@@ -34,22 +34,45 @@ bool CDRMPRIMETexture::Map(CVideoBufferDRMPRIME* buffer)
+   AVDRMFrameDescriptor* descriptor = buffer->GetDescriptor();
+   if (descriptor && descriptor->nb_layers)
+   {
+-    AVDRMLayerDescriptor* layer = &descriptor->layers[0];
++    // get drm format of the frame
++#ifdef HAVE_AVDRMFRAMEDESCRIPTOR_FORMAT
++    uint32_t format = descriptor->format;
++#else
++    uint32_t format = 0;
++#endif
++    if (!format && descriptor->nb_layers == 1)
++      format = descriptor->layers[0].format;
++    if (!format)
++    {
++      CLog::Log(LOGERROR, "CDRMPRIMETexture::{} - failed to determine format", __FUNCTION__);
++      return false;
++    }
+ 
+     std::array<CEGLImage::EglPlane, CEGLImage::MAX_NUM_PLANES> planes;
+ 
+-    for (int i = 0; i < layer->nb_planes; i++)
++    int index = 0;
++    for (int i = 0; i < descriptor->nb_layers; i++)
+     {
+-      planes[i].fd = descriptor->objects[layer->planes[i].object_index].fd;
+-      planes[i].offset = layer->planes[i].offset;
+-      planes[i].pitch = layer->planes[i].pitch;
++      AVDRMLayerDescriptor* layer = &descriptor->layers[i];
++      for (int j = 0; j < layer->nb_planes; j++)
++      {
++        AVDRMPlaneDescriptor* plane = &layer->planes[j];
++        AVDRMObjectDescriptor* object = &descriptor->objects[plane->object_index];
++
++        planes[index].fd = object->fd;
++        planes[index].modifier = object->format_modifier;
++        planes[index].offset = plane->offset;
++        planes[index].pitch = plane->pitch;
++
++        index++;
++      }
+     }
+ 
+     CEGLImage::EglAttrs attribs;
+ 
+     attribs.width = m_texWidth;
+     attribs.height = m_texHeight;
+-    attribs.format = layer->format;
++    attribs.format = format;
+     attribs.colorSpace = GetColorSpace(DRMPRIME::GetColorEncoding(buffer->GetPicture()));
+     attribs.colorRange = GetColorRange(DRMPRIME::GetColorRange(buffer->GetPicture()));
+     attribs.planes = planes;
+diff --git a/xbmc/cores/VideoPlayer/VideoRenderers/HwDecRender/VideoLayerBridgeDRMPRIME.cpp b/xbmc/cores/VideoPlayer/VideoRenderers/HwDecRender/VideoLayerBridgeDRMPRIME.cpp
+index bcb4badb9be2..f645445cc28c 100644
+--- a/xbmc/cores/VideoPlayer/VideoRenderers/HwDecRender/VideoLayerBridgeDRMPRIME.cpp
++++ b/xbmc/cores/VideoPlayer/VideoRenderers/HwDecRender/VideoLayerBridgeDRMPRIME.cpp
+@@ -84,6 +84,20 @@ bool CVideoLayerBridgeDRMPRIME::Map(CVideoBufferDRMPRIME* buffer)
+   uint64_t modifier[4] = {0};
+   int ret;
+ 
++  // get drm format of the frame
++#ifdef HAVE_AVDRMFRAMEDESCRIPTOR_FORMAT
++  uint32_t format = descriptor->format;
++#else
++  uint32_t format = 0;
++#endif
++  if (!format && descriptor->nb_layers == 1)
++    format = descriptor->layers[0].format;
++  if (!format)
++  {
++    CLog::Log(LOGERROR, "CVideoLayerBridgeDRMPRIME::{} - failed to determine format", __FUNCTION__);
++    return false;
++  }
++
+   // convert Prime FD to GEM handle
+   for (int object = 0; object < descriptor->nb_objects; object++)
+   {
+@@ -99,18 +113,21 @@ bool CVideoLayerBridgeDRMPRIME::Map(CVideoBufferDRMPRIME* buffer)
+     }
+   }
+ 
+-  AVDRMLayerDescriptor* layer = &descriptor->layers[0];
+-
+-  for (int plane = 0; plane < layer->nb_planes; plane++)
++  int index = 0;
++  for (int i = 0; i < descriptor->nb_layers; i++)
+   {
+-    int object = layer->planes[plane].object_index;
+-    uint32_t handle = buffer->m_handles[object];
+-    if (handle && layer->planes[plane].pitch)
++    AVDRMLayerDescriptor* layer = &descriptor->layers[i];
++    for (int j = 0; j < layer->nb_planes; j++)
+     {
+-      handles[plane] = handle;
+-      pitches[plane] = layer->planes[plane].pitch;
+-      offsets[plane] = layer->planes[plane].offset;
+-      modifier[plane] = descriptor->objects[object].format_modifier;
++      AVDRMPlaneDescriptor* plane = &layer->planes[j];
++      int object = plane->object_index;
++
++      handles[index] = buffer->m_handles[object];
++      pitches[index] = plane->pitch;
++      offsets[index] = plane->offset;
++      modifier[index] = descriptor->objects[object].format_modifier;
++
++      index++;
+     }
+   }
+ 
+@@ -119,8 +136,8 @@ bool CVideoLayerBridgeDRMPRIME::Map(CVideoBufferDRMPRIME* buffer)
+ 
+   // add the video frame FB
+   ret = drmModeAddFB2WithModifiers(m_DRM->GetFileDescriptor(), buffer->GetWidth(),
+-                                   buffer->GetHeight(), layer->format, handles, pitches, offsets,
+-                                   modifier, &buffer->m_fb_id, flags);
++                                   buffer->GetHeight(), format, handles, pitches, offsets, modifier,
++                                   &buffer->m_fb_id, flags);
+   if (ret < 0)
+   {
+     CLog::Log(LOGERROR, "CVideoLayerBridgeDRMPRIME::{} - failed to add fb {}, ret = {}",
+
+From 71eaa4d40f6a11af76318659b93565e3ff821436 Mon Sep 17 00:00:00 2001
+From: Jonas Karlman <jonas@kwiboo.se>
+Date: Sun, 20 Oct 2019 17:00:23 +0000
+Subject: [PATCH 2/5] WIP: DVDVideoCodecDRMPRIME: add support for vaapi
+ decoding
+
+---
+ .../Buffers/VideoBufferDRMPRIME.cpp           | 34 +++++++++++++++++++
+ .../VideoPlayer/Buffers/VideoBufferDRMPRIME.h |  8 ++---
+ .../DVDCodecs/Video/DVDVideoCodecDRMPRIME.cpp | 19 +++++++----
+ 3 files changed, 51 insertions(+), 10 deletions(-)
+
+diff --git a/xbmc/cores/VideoPlayer/Buffers/VideoBufferDRMPRIME.cpp b/xbmc/cores/VideoPlayer/Buffers/VideoBufferDRMPRIME.cpp
+index 25da2de9e99b..308d6155d7e1 100644
+--- a/xbmc/cores/VideoPlayer/Buffers/VideoBufferDRMPRIME.cpp
++++ b/xbmc/cores/VideoPlayer/Buffers/VideoBufferDRMPRIME.cpp
+@@ -102,12 +102,46 @@ void CVideoBufferDRMPRIMEFFmpeg::Unref()
+   av_frame_unref(m_pFrame);
+ }
+ 
++AVDRMFrameDescriptor* CVideoBufferDRMPRIMEFFmpeg::GetDescriptor() const
++{
++  if (m_pMapFrame)
++    return reinterpret_cast<AVDRMFrameDescriptor*>(m_pMapFrame->data[0]);
++
++  return reinterpret_cast<AVDRMFrameDescriptor*>(m_pFrame->data[0]);
++}
++
+ bool CVideoBufferDRMPRIMEFFmpeg::IsValid() const
+ {
++  if (m_pFrame->format == AV_PIX_FMT_VAAPI)
++    return true;
++
+   AVDRMFrameDescriptor* descriptor = GetDescriptor();
+   return descriptor && descriptor->nb_layers;
+ }
+ 
++bool CVideoBufferDRMPRIMEFFmpeg::AcquireDescriptor()
++{
++  if (m_pFrame->format == AV_PIX_FMT_VAAPI)
++  {
++    m_pMapFrame = av_frame_alloc();
++    m_pMapFrame->format = AV_PIX_FMT_DRM_PRIME;
++
++    int ret = av_hwframe_map(m_pMapFrame, m_pFrame, 0);
++    if (ret)
++    {
++      av_frame_free(&m_pMapFrame);
++      return false;
++    }
++  }
++
++  return true;
++}
++
++void CVideoBufferDRMPRIMEFFmpeg::ReleaseDescriptor()
++{
++  av_frame_free(&m_pMapFrame);
++}
++
+ CVideoBufferPoolDRMPRIMEFFmpeg::~CVideoBufferPoolDRMPRIMEFFmpeg()
+ {
+   for (auto buf : m_all)
+diff --git a/xbmc/cores/VideoPlayer/Buffers/VideoBufferDRMPRIME.h b/xbmc/cores/VideoPlayer/Buffers/VideoBufferDRMPRIME.h
+index 822c00fd2078..e439238eb80a 100644
+--- a/xbmc/cores/VideoPlayer/Buffers/VideoBufferDRMPRIME.h
++++ b/xbmc/cores/VideoPlayer/Buffers/VideoBufferDRMPRIME.h
+@@ -88,14 +88,14 @@ class CVideoBufferDRMPRIMEFFmpeg : public CVideoBufferDRMPRIME
+   void SetRef(AVFrame* frame);
+   void Unref();
+ 
+-  AVDRMFrameDescriptor* GetDescriptor() const override
+-  {
+-    return reinterpret_cast<AVDRMFrameDescriptor*>(m_pFrame->data[0]);
+-  }
++  AVDRMFrameDescriptor* GetDescriptor() const override;
+   bool IsValid() const override;
++  bool AcquireDescriptor() override;
++  void ReleaseDescriptor() override;
+ 
+ protected:
+   AVFrame* m_pFrame = nullptr;
++  AVFrame* m_pMapFrame = nullptr;
+ };
+ 
+ class CVideoBufferPoolDRMPRIMEFFmpeg : public IVideoBufferPool
+diff --git a/xbmc/cores/VideoPlayer/DVDCodecs/Video/DVDVideoCodecDRMPRIME.cpp b/xbmc/cores/VideoPlayer/DVDCodecs/Video/DVDVideoCodecDRMPRIME.cpp
+index ba3c93d89d48..a7f0f2db91ce 100644
+--- a/xbmc/cores/VideoPlayer/DVDCodecs/Video/DVDVideoCodecDRMPRIME.cpp
++++ b/xbmc/cores/VideoPlayer/DVDCodecs/Video/DVDVideoCodecDRMPRIME.cpp
+@@ -107,7 +107,7 @@ static bool IsSupportedHwFormat(const enum AVPixelFormat fmt)
+   bool hw = CServiceBroker::GetSettingsComponent()->GetSettings()->GetBool(
+       SETTING_VIDEOPLAYER_USEPRIMEDECODERFORHW);
+ 
+-  return fmt == AV_PIX_FMT_DRM_PRIME && hw;
++  return hw && (fmt == AV_PIX_FMT_DRM_PRIME || fmt == AV_PIX_FMT_VAAPI);
+ }
+ 
+ static bool IsSupportedSwFormat(const enum AVPixelFormat fmt)
+@@ -128,7 +128,8 @@ static const AVCodecHWConfig* FindHWConfig(const AVCodec* codec)
+       continue;
+ 
+     if ((config->methods & AV_CODEC_HW_CONFIG_METHOD_HW_DEVICE_CTX) &&
+-        config->device_type == AV_HWDEVICE_TYPE_DRM)
++        (config->device_type == AV_HWDEVICE_TYPE_DRM ||
++         config->device_type == AV_HWDEVICE_TYPE_VAAPI))
+       return config;
+ 
+     if ((config->methods & AV_CODEC_HW_CONFIG_METHOD_INTERNAL))
+@@ -239,12 +240,13 @@ bool CDVDVideoCodecDRMPRIME::Open(CDVDStreamInfo& hints, CDVDCodecOptions& optio
+   m_hints = hints;
+ 
+   const AVCodecHWConfig* pConfig = FindHWConfig(pCodec);
+-  if (pConfig && (pConfig->methods & AV_CODEC_HW_CONFIG_METHOD_HW_DEVICE_CTX) &&
+-      pConfig->device_type == AV_HWDEVICE_TYPE_DRM)
++  if (pConfig && (pConfig->methods & AV_CODEC_HW_CONFIG_METHOD_HW_DEVICE_CTX))
+   {
+     CWinSystemGbm* winSystem = dynamic_cast<CWinSystemGbm*>(CServiceBroker::GetWinSystem());
+-    if (av_hwdevice_ctx_create(&m_pCodecContext->hw_device_ctx, AV_HWDEVICE_TYPE_DRM,
+-                               drmGetDeviceNameFromFd2(winSystem->GetDrm()->GetFileDescriptor()),
++    const char* device = pConfig->device_type == AV_HWDEVICE_TYPE_DRM
++                             ? drmGetDeviceNameFromFd2(winSystem->GetDrm()->GetFileDescriptor())
++                             : nullptr;
++    if (av_hwdevice_ctx_create(&m_pCodecContext->hw_device_ctx, pConfig->device_type, device,
+                                nullptr, 0) < 0)
+     {
+       CLog::Log(LOGINFO, "CDVDVideoCodecDRMPRIME::{} - unable to create hwdevice context",
+@@ -261,12 +263,17 @@ bool CDVDVideoCodecDRMPRIME::Open(CDVDStreamInfo& hints, CDVDCodecOptions& optio
+   m_pCodecContext->codec_tag = hints.codec_tag;
+   m_pCodecContext->coded_width = hints.width;
+   m_pCodecContext->coded_height = hints.height;
++  m_pCodecContext->level = hints.level;
++  m_pCodecContext->profile = hints.profile;
+   m_pCodecContext->bits_per_coded_sample = hints.bitsperpixel;
+   m_pCodecContext->time_base.num = 1;
+   m_pCodecContext->time_base.den = DVD_TIME_BASE;
+   m_pCodecContext->thread_safe_callbacks = 1;
+   m_pCodecContext->thread_count = CServiceBroker::GetCPUInfo()->GetCPUCount();
+ 
++  if (pConfig && pConfig->device_type == AV_HWDEVICE_TYPE_VAAPI)
++    m_pCodecContext->extra_hw_frames = 6;
++
+   if (hints.extradata && hints.extrasize > 0)
+   {
+     m_pCodecContext->extradata_size = hints.extrasize;
+
+From 3b5448fee43672863ad8d1b2edafe334aa88e03b Mon Sep 17 00:00:00 2001
+From: Jonas Karlman <jonas@kwiboo.se>
+Date: Sat, 21 Dec 2019 21:59:35 +0000
+Subject: [PATCH 3/5] WIP: windowing/gbm: only use test commit for modeset
+
+---
+ xbmc/windowing/gbm/DRMAtomic.cpp | 38 ++++++++++++++++++++------------
+ 1 file changed, 24 insertions(+), 14 deletions(-)
+
+diff --git a/xbmc/windowing/gbm/DRMAtomic.cpp b/xbmc/windowing/gbm/DRMAtomic.cpp
+index 092ad3fc189b..7b9301fd398a 100644
+--- a/xbmc/windowing/gbm/DRMAtomic.cpp
++++ b/xbmc/windowing/gbm/DRMAtomic.cpp
+@@ -27,7 +27,8 @@ void CDRMAtomic::DrmAtomicCommit(int fb_id, int flags, bool rendered, bool video
+ {
+   uint32_t blob_id;
+ 
+-  if (flags & DRM_MODE_ATOMIC_ALLOW_MODESET)
++  bool modeset = (flags & DRM_MODE_ATOMIC_ALLOW_MODESET);
++  if (modeset)
+   {
+     if (!AddProperty(m_connector, "CRTC_ID", m_crtc->crtc->crtc_id))
+     {
+@@ -67,14 +68,18 @@ void CDRMAtomic::DrmAtomicCommit(int fb_id, int flags, bool rendered, bool video
+   {
+     AddProperty(m_gui_plane, "FB_ID", fb_id);
+     AddProperty(m_gui_plane, "CRTC_ID", m_crtc->crtc->crtc_id);
+-    AddProperty(m_gui_plane, "SRC_X", 0);
+-    AddProperty(m_gui_plane, "SRC_Y", 0);
+-    AddProperty(m_gui_plane, "SRC_W", m_width << 16);
+-    AddProperty(m_gui_plane, "SRC_H", m_height << 16);
+-    AddProperty(m_gui_plane, "CRTC_X", 0);
+-    AddProperty(m_gui_plane, "CRTC_Y", 0);
+-    AddProperty(m_gui_plane, "CRTC_W", m_mode->hdisplay);
+-    AddProperty(m_gui_plane, "CRTC_H", m_mode->vdisplay);
++
++    if (modeset)
++    {
++      AddProperty(m_gui_plane, "SRC_X", 0);
++      AddProperty(m_gui_plane, "SRC_Y", 0);
++      AddProperty(m_gui_plane, "SRC_W", m_width << 16);
++      AddProperty(m_gui_plane, "SRC_H", m_height << 16);
++      AddProperty(m_gui_plane, "CRTC_X", 0);
++      AddProperty(m_gui_plane, "CRTC_Y", 0);
++      AddProperty(m_gui_plane, "CRTC_W", m_mode->hdisplay);
++      AddProperty(m_gui_plane, "CRTC_H", m_mode->vdisplay);
++    }
+   }
+   else if (videoLayer && !CServiceBroker::GetGUI()->GetWindowManager().HasVisibleControls())
+   {
+@@ -83,12 +88,17 @@ void CDRMAtomic::DrmAtomicCommit(int fb_id, int flags, bool rendered, bool video
+     AddProperty(m_gui_plane, "CRTC_ID", 0);
+   }
+ 
+-  auto ret = drmModeAtomicCommit(m_fd, m_req, flags | DRM_MODE_ATOMIC_TEST_ONLY, nullptr);
+-  if (ret < 0)
++  int ret = 0;
++  if (modeset)
+   {
+-    CLog::Log(LOGERROR, "CDRMAtomic::%s - test commit failed: %s", __FUNCTION__, strerror(errno));
++    ret = drmModeAtomicCommit(m_fd, m_req, flags | DRM_MODE_ATOMIC_TEST_ONLY, nullptr);
++    if (ret < 0)
++    {
++      CLog::Log(LOGERROR, "CDRMAtomic::%s - test commit failed: %s", __FUNCTION__, strerror(errno));
++    }
+   }
+-  else if (ret == 0)
++
++  if (ret == 0)
+   {
+     ret = drmModeAtomicCommit(m_fd, m_req, flags, nullptr);
+     if (ret < 0)
+@@ -97,7 +107,7 @@ void CDRMAtomic::DrmAtomicCommit(int fb_id, int flags, bool rendered, bool video
+     }
+   }
+ 
+-  if (flags & DRM_MODE_ATOMIC_ALLOW_MODESET)
++  if (modeset)
+   {
+     if (drmModeDestroyPropertyBlob(m_fd, blob_id) != 0)
+       CLog::Log(LOGERROR, "CDRMAtomic::%s - failed to destroy property blob: %s", __FUNCTION__, strerror(errno));
+
+From 2ba414df2cfbcb962fd7646ab1bcbbe3ad17db05 Mon Sep 17 00:00:00 2001
+From: Jonas Karlman <jonas@kwiboo.se>
+Date: Sun, 9 Aug 2020 12:09:08 +0000
+Subject: [PATCH 4/5] HACK: VideoLayerBridgeDRMPRIME: add Colorspace property
+
+---
+ .../HwDecRender/VideoLayerBridgeDRMPRIME.cpp              | 8 ++++++++
+ 1 file changed, 8 insertions(+)
+
+diff --git a/xbmc/cores/VideoPlayer/VideoRenderers/HwDecRender/VideoLayerBridgeDRMPRIME.cpp b/xbmc/cores/VideoPlayer/VideoRenderers/HwDecRender/VideoLayerBridgeDRMPRIME.cpp
+index f645445cc28c..191709856f43 100644
+--- a/xbmc/cores/VideoPlayer/VideoRenderers/HwDecRender/VideoLayerBridgeDRMPRIME.cpp
++++ b/xbmc/cores/VideoPlayer/VideoRenderers/HwDecRender/VideoLayerBridgeDRMPRIME.cpp
+@@ -43,6 +43,10 @@ void CVideoLayerBridgeDRMPRIME::Disable()
+       drmModeDestroyPropertyBlob(m_DRM->GetFileDescriptor(), m_hdr_blob_id);
+     m_hdr_blob_id = 0;
+   }
++  if (m_DRM->SupportsProperty(connector, "Colorspace"))
++  {
++    m_DRM->AddProperty(connector, "Colorspace", 0);
++  }
+ }
+ 
+ void CVideoLayerBridgeDRMPRIME::Acquire(CVideoBufferDRMPRIME* buffer)
+@@ -240,6 +244,10 @@ void CVideoLayerBridgeDRMPRIME::Configure(CVideoBufferDRMPRIME* buffer)
+     m_DRM->AddProperty(connector, "HDR_OUTPUT_METADATA", m_hdr_blob_id);
+     m_DRM->SetActive(true);
+   }
++  if (m_DRM->SupportsProperty(connector, "Colorspace"))
++  {
++    m_DRM->AddProperty(connector, "Colorspace", GetColorEncoding(picture) == DRM_COLOR_YCBCR_BT2020 ? (GetEOTF(picture) ? 10 : 9) : 0);
++  }
+ }
+ 
+ void CVideoLayerBridgeDRMPRIME::SetVideoPlane(CVideoBufferDRMPRIME* buffer, const CRect& destRect)
+
+From 735b9592d7e019b8454cffbcc04307651378219c Mon Sep 17 00:00:00 2001
+From: Jonas Karlman <jonas@kwiboo.se>
+Date: Sun, 9 Aug 2020 12:31:36 +0000
+Subject: [PATCH 5/5] WIP: DVDVideoCodecDRMPRIME: do not limit allowed
+ references
+
+---
+ xbmc/cores/VideoPlayer/DVDCodecs/Video/DVDVideoCodecDRMPRIME.h | 1 -
+ 1 file changed, 1 deletion(-)
+
+diff --git a/xbmc/cores/VideoPlayer/DVDCodecs/Video/DVDVideoCodecDRMPRIME.h b/xbmc/cores/VideoPlayer/DVDCodecs/Video/DVDVideoCodecDRMPRIME.h
+index 77d066c3d9ca..4cb311b008ab 100644
+--- a/xbmc/cores/VideoPlayer/DVDCodecs/Video/DVDVideoCodecDRMPRIME.h
++++ b/xbmc/cores/VideoPlayer/DVDCodecs/Video/DVDVideoCodecDRMPRIME.h
+@@ -28,7 +28,6 @@ class CDVDVideoCodecDRMPRIME : public CDVDVideoCodec
+   void Reset() override;
+   CDVDVideoCodec::VCReturn GetPicture(VideoPicture* pVideoPicture) override;
+   const char* GetName() override { return m_name.c_str(); }
+-  unsigned GetAllowedReferences() override { return 5; }
+   void SetCodecControl(int flags) override { m_codecControlFlags = flags; }
+ 
+ protected:
