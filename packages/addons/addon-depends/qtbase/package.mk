@@ -3,8 +3,8 @@
 # Copyright (C) 2019-present Team LibreELEC (https://libreelec.tv)
 
 PKG_NAME="qtbase"
-PKG_VERSION="5.14.0"
-PKG_SHA256="4ef921c0f208a1624439801da8b3f4344a3793b660ce1095f2b7f5c4246b9463"
+PKG_VERSION="5.14.2"
+PKG_SHA256="48b9e79220941665a9dd827548c6428f7aa3052ccba8f4f7e039a94aa1d2b28a"
 PKG_LICENSE="GPL"
 PKG_SITE="http://qt-project.org"
 PKG_URL="http://download.qt.io/archive/qt/${PKG_VERSION%.*}/$PKG_VERSION/submodules/$PKG_NAME-everywhere-src-$PKG_VERSION.tar.xz"
