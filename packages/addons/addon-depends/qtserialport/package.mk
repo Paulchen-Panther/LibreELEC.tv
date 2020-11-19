@@ -2,8 +2,8 @@
 # Copyright (C) 2016-present Team LibreELEC (https://libreelec.tv)
 
 PKG_NAME="qtserialport"
-PKG_VERSION="5.14.0"
-PKG_SHA256="4b647a66ae4da6b05b41b49ed296012002c1951f8a3ee24e0f2aa493f48e1ed3"
+PKG_VERSION="5.14.2"
+PKG_SHA256="a6d977dd723ad4d3368b5163691405b8852f809974a96ec54103494e834aea21"
 PKG_LICENSE="GPL2"
 PKG_SITE="http://qt-project.org"
 PKG_URL="http://download.qt.io/archive/qt/${PKG_VERSION%.*}/$PKG_VERSION/submodules/$PKG_NAME-everywhere-src-$PKG_VERSION.tar.xz"
