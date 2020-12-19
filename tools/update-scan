@@ -21,7 +21,7 @@ check_for_update() {
   # make optional variables from makefiles local to wipe for next invocation
   local PKG_DOWNLOAD_REPO PKG_WATCH PKG_URL watch_test
 
-  . "${1}"
+  . "${1}" &> /dev/null
 
   if [ -z "${PKG_WATCH}" ]; then
     : #echo "info: ${PKG_NAME}: PKG_WATCH not set; skipping"
