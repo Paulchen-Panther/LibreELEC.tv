@@ -19,12 +19,12 @@ help() {
 
 check_for_update() {
   # make optional variables from makefiles local to wipe for next invocation
-  local PKG_DOWNLOAD_REPO PKG_USCAN PKG_URL watch_test
+  local PKG_DOWNLOAD_REPO PKG_WATCH PKG_URL watch_test
 
   . "${1}"
 
-  if [ -z "${PKG_USCAN}" ]; then
-    echo "info: ${PKG_NAME}: PKG_USCAN not set; skipping"
+  if [ -z "${PKG_WATCH}" ]; then
+    : #echo "info: ${PKG_NAME}: PKG_WATCH not set; skipping"
     return
   fi
 
@@ -39,16 +39,18 @@ check_for_update() {
     download_repo="${PKG_DOWNLOAD_REPO}"
   fi
 
-#  uscan_regex="${PKG_USCAN:-${PKG_NAME}-(.+)\.(?:zip|tgz|tbz|txz\(?:tar\.(?:gz|bz2|xz)))}"
-#  watch_test="${download_repo} ${uscan_regex}"
-  watch_test="${download_repo} ${PKG_USCAN}"
+  watch_test="${PKG_WATCH}"
 
   uscan_tmpfile=$(mktemp)
   echo "version=4" > "${uscan_tmpfile}"
   echo "${watch_test}" >> "${uscan_tmpfile}"
 
-  uscan --no-conf --report-status --package "${PKG_NAME}" --upstream-version "${PKG_VERSION}" --watchfile "${uscan_tmpfile}" | tail -n3 | head -n1
+  REV=$(uscan --no-conf --verbose --safe --package "${PKG_NAME}" --upstream-version "${PKG_VERSION}" --watchfile "${uscan_tmpfile}" 2>&1 | grep '\$newversion' | awk '{print $3}')
 
+  NEEDUPD=""
+  if [ ! "$PKG_VERSION" = "$REV" ] ; then
+    printf "* %-32s old: %-10s new: %-10s %-10s\n" "$PKG_NAME" "$PKG_VERSION" "$REV"
+  fi
   rm "${uscan_tmpfile}"
 }
 
