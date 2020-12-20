@@ -41,6 +41,9 @@ check_for_update() {
         PKG_WATCH+="tags (?:.*?/)(?i)(?:|v|release|$PKG_NAME)?@ANY_VERSION@@ARCHIVE_EXT@"
         # uscan options to disallow beta and rc versions
         #not working ? #uscan_opts='opts=uversionmangle=s/(\d)[_\.\-\+]?((RC|rc|Pre|pre|dev|beta|alpha)[\-\.]?\d*)$/$1~$2/'
+      elif [[ ! ${PKG_URL} =~ ^.*github.com.*$ ]]; then
+        PKG_WATCH="${PKG_URL%/${PKG_NAME}*}"
+        PKG_WATCH+="/(?i)(?:|v|release|$PKG_NAME)?@ANY_VERSION@@ARCHIVE_EXT@"
       else
         PACKAGES_UNKNOWN+=" ${PKG_NAME}"
         return
