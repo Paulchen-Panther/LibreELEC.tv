@@ -4,10 +4,10 @@
 
 PKG_NAME="faad2"
 PKG_VERSION="2.8.8"
-PKG_SHA256="985c3fadb9789d2815e50f4ff714511c79c2710ac27a4aaaf5c0c2662141426d"
+PKG_SHA256="722b9a845ebb05307e49803fd101df4bfab50aa4d3b452490ed873903fe65bcf"
 PKG_LICENSE="GPL"
-PKG_SITE="http://www.audiocoding.com"
-PKG_URL="https://downloads.sourceforge.net/sourceforge/faac/faad2-$PKG_VERSION.tar.gz"
+PKG_SITE="https://github.com/knik0/faad2"
+PKG_URL="https://github.com/knik0/faad2/archive/${PKG_VERSION//./_}.tar.gz"
 PKG_DEPENDS_TARGET="toolchain"
 PKG_LONGDESC="An MPEG-4 AAC decoder."
 
